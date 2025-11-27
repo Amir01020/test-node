@@ -3,6 +3,7 @@ const axios = require('axios');
 
 const API_URL = 'https://test.icorp.uz/interview.php';
 const PORT = 3000;
+const WEBHOOK_URL = 'https://webhook.site/8ef2205b-0cf0-429b-8655-61cf1ff4b551';
 
 let firstPart = '';
 let secondPart = '';
@@ -11,65 +12,50 @@ const app = express();
 app.use(express.json());
 
 app.post('/webhook', (req, res) => {
-    console.log('Получен webhook:', req.body);
-    secondPart = req.body.code || req.body.part || JSON.stringify(req.body);
-    console.log('Вторая часть кода получена:', secondPart);
+    console.log('Webhook получен:', req.body);
+    secondPart = req.body.part2 || '';
+    console.log('Вторая часть кода:', secondPart);
     res.status(200).send('OK');
     
-    completeFinalStep()
-        .then(() => {
-            server.close();
-            process.exit(0);
-        })
-        .catch(error => {
-            console.error('Ошибка:', error.message);
-            server.close();
-            process.exit(1);
-        });
+    setTimeout(() => {
+        step3_sendGet()
+            .then(() => {
+                server.close();
+                process.exit(0);
+            })
+            .catch(error => {
+                console.error('Ошибка:', error.message);
+                server.close();
+                process.exit(1);
+            });
+    }, 1000);
 });
 
 const server = app.listen(PORT, () => {
     console.log(`Сервер запущен на порту ${PORT}`);
-    console.log('Запусти ngrok в другом терминале:');
-    console.log(`ngrok http ${PORT}`);
-    console.log('Затем скопируй HTTPS URL из ngrok и введи его ниже...\n');
+    step1_sendPost();
 });
 
-const readline = require('readline').createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-readline.question('Введи ngrok URL: ', (ngrokUrl) => {
-    readline.close();
-    
-    step1_sendPost(ngrokUrl.trim())
-        .catch(error => {
-            console.error('Ошибка:', error.message);
-            server.close();
-            process.exit(1);
-        });
-});
-
-function step1_sendPost(webhookUrl) {
+function step1_sendPost() {
     console.log('\nШаг 1: Отправка POST-запроса...');
     
     const payload = {
-        msg: 'Hello from Amin',
-        url: `${webhookUrl}/webhook`
+        msg: 'Amir',
+        url: WEBHOOK_URL
     };
-    
-    console.log('Payload:', payload);
     
     return axios.post(API_URL, payload)
         .then(response => {
             console.log('Ответ получен:', response.data);
-            firstPart = response.data.code || response.data.part || response.data;
+            firstPart = response.data.part1 || '';
             console.log('Первая часть кода:', firstPart);
+        })
+        .catch(error => {
+            console.error('Ошибка:', error.message);
         });
 }
 
-function completeFinalStep() {
+function step3_sendGet() {
     console.log('\nШаг 3: Объединение кодов и отправка GET-запроса...');
     
     const fullCode = firstPart + secondPart;
